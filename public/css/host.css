@@ -1,0 +1,111 @@
+.host-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.host-header h1 {
+  font-size: 22px;
+  margin: 0 0 6px;
+}
+.host-header p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.setup-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.setup-row label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+textarea, input[type="number"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 15px;
+}
+textarea { min-height: 140px; resize: vertical; line-height: 1.6; }
+
+.join-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 22px;
+  text-align: center;
+}
+.join-panel img { width: 200px; height: 200px; border-radius: 12px; }
+.join-url {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  word-break: break-all;
+}
+
+.roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.roster li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.roster .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--line);
+  flex: 0 0 auto;
+}
+.roster .dot.connected { background: var(--accent-2); }
+.roster .name { flex: 1; font-weight: 600; }
+.roster .seat { font-family: var(--font-mono); font-size: 12px; color: var(--ink-soft); }
+.roster button.remove {
+  border: none;
+  background: transparent;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.progress-panel {
+  text-align: center;
+  padding: 28px 20px;
+}
+.progress-panel .round-label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.progress-panel .timer {
+  font-family: var(--font-mono);
+  font-size: 56px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin: 6px 0 14px;
+}
+.progress-panel .timer.is-warning { color: var(--danger); }
+.progress-panel .submit-count { font-size: 15px; color: var(--ink-soft); }
+
+.section-gap { margin-top: 20px; }
+.actions-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }

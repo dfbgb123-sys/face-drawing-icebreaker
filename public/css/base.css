@@ -1,0 +1,98 @@
+:root {
+  --bg: #f4f1e9;
+  --surface: #ffffff;
+  --surface-2: #eeeadd;
+  --ink: #232320;
+  --ink-soft: #6b6558;
+  --line: rgba(35, 35, 32, 0.14);
+  --accent: #d94f26;
+  --accent-ink: #ffffff;
+  --accent-2: #2f6f6b;
+  --danger: #c23b3b;
+  --shadow: rgba(35, 35, 32, 0.16);
+  --font: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15181b;
+    --surface: #1e2226;
+    --surface-2: #262b2f;
+    --ink: #ece8de;
+    --ink-soft: #9aa199;
+    --line: rgba(236, 232, 222, 0.14);
+    --accent: #ff7a4d;
+    --accent-ink: #1a1108;
+    --accent-2: #5cbdb5;
+    --danger: #e2685f;
+    --shadow: rgba(0, 0, 0, 0.5);
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+button:disabled { cursor: not-allowed; opacity: 0.5; }
+
+input {
+  font-family: inherit;
+}
+
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 14px 22px;
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--accent);
+  color: var(--accent-ink);
+  transition: transform 0.1s ease, opacity 0.15s ease;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn.secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+}
+.btn.ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1.5px solid var(--line);
+}
+.btn:focus-visible, .chip:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 12px 28px -18px var(--shadow);
+}
+
+.muted { color: var(--ink-soft); }
+
+.container {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

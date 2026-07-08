@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>얼굴 그리기 아이스브레이커</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/player.css" />
+</head>
+<body>
+  <div class="container">
+    <section id="view-loading" class="center-message">
+      <p class="muted">불러오는 중...</p>
+    </section>
+
+    <section id="view-none" class="center-message" style="display:none;">
+      <h2>아직 세션이 없어요</h2>
+      <p class="muted">진행자가 세션을 만들 때까지 기다려주세요.</p>
+      <button class="btn secondary" id="retry-btn">다시 확인하기</button>
+    </section>
+
+    <section id="view-join" style="display:none;">
+      <div class="center-message" style="padding-top:0;">
+        <h2>내 이름을 선택하세요</h2>
+      </div>
+      <div class="name-grid" id="name-grid"></div>
+    </section>
+
+    <section id="view-lobby" class="center-message" style="display:none;">
+      <h2 id="lobby-greeting"></h2>
+      <p class="muted">진행자가 시작하면 바로 알려드릴게요. 잠시만 기다려주세요.</p>
+    </section>
+
+    <section id="view-intermission" class="center-message" style="display:none;">
+      <p class="muted round-label">다음 순서</p>
+      <h2 id="intermission-subject"></h2>
+      <div class="timer" id="intermission-timer">0:00</div>
+      <p class="muted">그릴 준비를 해주세요.</p>
+    </section>
+
+    <section id="view-drawing" style="display:none;">
+      <div class="round-header">
+        <p class="round-label" id="drawing-round-label"></p>
+        <p class="subject-name" id="drawing-subject-name"></p>
+        <p class="timer" id="drawing-timer">0:00</p>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="pad"></canvas>
+      </div>
+
+      <div class="toolbar">
+        <button class="swatch active" data-color="#232320" style="background:#232320"></button>
+        <button class="swatch" data-color="#d94f26" style="background:#d94f26"></button>
+        <button class="swatch" data-color="#2f6f6b" style="background:#2f6f6b"></button>
+        <button class="swatch" data-color="#3b5bd9" style="background:#3b5bd9"></button>
+        <button class="tool-btn active" id="pen-btn">펜</button>
+        <button class="tool-btn" id="eraser-btn">지우개</button>
+        <button class="tool-btn" id="clear-btn">전체 지우기</button>
+      </div>
+
+      <div class="actions-row" style="margin-top:16px; display:flex; justify-content:center;">
+        <button class="btn" id="submit-btn" style="width:100%; max-width:320px;">제출하기</button>
+      </div>
+
+      <div class="submitted-banner" id="submitted-banner" style="display:none;">
+        제출 완료! 다음 라운드를 기다려주세요.
+      </div>
+    </section>
+
+    <section id="view-results" style="display:none;">
+      <div class="center-message" style="padding-top:0;">
+        <h2>나를 그린 그림들</h2>
+        <p class="muted" id="results-intro"></p>
+      </div>
+
+      <div class="portrait-nav">
+        <button class="nav-btn" id="prev-btn">‹</button>
+        <span class="position" id="portrait-position"></span>
+        <button class="nav-btn" id="next-btn">›</button>
+      </div>
+
+      <div class="portrait-card" id="portrait-card"></div>
+
+      <div class="guess-panel" id="guess-panel">
+        <p class="muted" style="margin-bottom:0;">누가 그렸을까요?</p>
+        <div class="guess-grid" id="guess-grid"></div>
+        <div style="text-align:center;">
+          <button class="btn secondary" id="reveal-btn" style="margin-top:12px;">정답 보기</button>
+        </div>
+        <div id="reveal-result"></div>
+      </div>
+    </section>
+
+    <section id="view-ended" class="center-message" style="display:none;">
+      <h2>세션이 종료됐어요</h2>
+      <p class="muted">즐거운 시간 되셨길 바라요.</p>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/countdown.js"></script>
+  <script src="js/socketClient.js"></script>
+  <script src="js/player.js"></script>
+</body>
+</html>
