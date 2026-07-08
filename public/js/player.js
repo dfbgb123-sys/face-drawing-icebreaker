@@ -157,7 +157,15 @@
     grid.innerHTML = '';
     for (const p of participants) {
       const btn = document.createElement('button');
-      btn.innerHTML = `<span>${p.name}</span>` + (p.claimed ? '<span class="taken-label">입장함</span>' : '');
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = p.name;
+      btn.appendChild(nameSpan);
+      if (p.claimed) {
+        const takenSpan = document.createElement('span');
+        takenSpan.className = 'taken-label';
+        takenSpan.textContent = '입장함';
+        btn.appendChild(takenSpan);
+      }
       btn.disabled = p.claimed;
       btn.addEventListener('click', () => joinAsParticipant(p.id, p.name));
       grid.appendChild(btn);
