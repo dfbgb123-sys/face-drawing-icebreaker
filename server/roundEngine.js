@@ -29,8 +29,13 @@ function emitLobbyUpdate(session, io) {
 }
 
 function startSession(session, io) {
-  session.offsets = computeOffsetSequence(session.participants.length);
-  session.totalRounds = session.participants.length - 1;
+  if (session.mode === 'baton') {
+    session.offsets = [0, ...computeOffsetSequence(session.participants.length)];
+    session.totalRounds = session.participants.length;
+  } else {
+    session.offsets = computeOffsetSequence(session.participants.length);
+    session.totalRounds = session.participants.length - 1;
+  }
   session.currentRoundIndex = -1;
   advanceToNextRound(session, io);
 }
@@ -39,7 +44,11 @@ function advanceToNextRound(session, io) {
   session.currentRoundIndex += 1;
 
   if (session.currentRoundIndex >= session.totalRounds) {
-    goToResults(session, io);
+    if (session.mode === 'portrait') {
+      startResultsSuspense(session, io);
+    } else {
+      goToResults(session, io);
+    }
     return;
   }
 
@@ -66,11 +75,15 @@ function announceAssignments(session, io) {
     const artist = session.participants.find((p) => p.id === artistId);
     const subject = session.participants.find((p) => p.id === subjectId);
     if (artist && artist.socketId) {
-      io.to(artist.socketId).emit('round:assignment', {
+      const payload = {
         roundIndex: session.currentRoundIndex,
         subjectId,
         subjectName: subject.name
-      });
+      };
+      if (session.mode === 'baton' && session.currentRoundIndex > 0) {
+        payload.canvasUrl = `${drawingStorage.batonPngUrlFor(session, subject.name)}?r=${session.currentRoundIndex}`;
+      }
+      io.to(artist.socketId).emit('round:assignment', payload);
     }
   }
 }
@@ -169,6 +182,11 @@ function forceAdvance(session, io) {
     endRound(session, io, session.currentRoundIndex);
     return { ok: true };
   }
+  if (session.status === 'reveal-wait') {
+    clearTimeout(session.revealTimerHandle);
+    goToResults(session, io);
+    return { ok: true };
+  }
   return { ok: false, code: 'NO_ACTIVE_ROUND' };
 }
 
@@ -194,16 +212,81 @@ function getPortraitsForParticipant(session, participantId) {
   return portraits;
 }
 
+function getArtistDrawing(session, participantId) {
+  const submission = session.submissions.get(submissionKey(0, participantId));
+  if (!submission) return null;
+  const artist = session.participants.find((p) => p.id === participantId);
+  const subject = session.participants.find((p) => p.id === submission.subjectId);
+  return {
+    pngUrl: submission.pngPath
+      ? drawingStorage.pngUrlFor(session, 0, subject.name, artist.name)
+      : null,
+    missing: !submission.pngPath
+  };
+}
+
+function getFinalCanvasForOwner(session, ownerId) {
+  const owner = session.participants.find((p) => p.id === ownerId);
+  if (!owner) return null;
+  const n = session.participants.length;
+  let everWritten = false;
+  for (let roundIndex = 0; roundIndex < session.totalRounds; roundIndex++) {
+    const artistSeat = getArtistForSubjectInRound(owner.seatIndex, roundIndex, session.offsets, n);
+    const artist = session.participants[artistSeat];
+    const submission = session.submissions.get(submissionKey(roundIndex, artist.id));
+    if (submission && submission.pngPath) everWritten = true;
+  }
+  return {
+    pngUrl: everWritten ? drawingStorage.batonPngUrlFor(session, owner.name) : null,
+    missing: !everWritten
+  };
+}
+
+function getBatonGallery(session, participantId) {
+  const ordered = [
+    session.participants.find((p) => p.id === participantId),
+    ...session.participants.filter((p) => p.id !== participantId)
+  ];
+  return ordered.map((owner) => {
+    const canvas = getFinalCanvasForOwner(session, owner.id);
+    return {
+      portraitId: `baton-${owner.id}`,
+      ownerName: owner.name,
+      isMine: owner.id === participantId,
+      pngUrl: canvas.pngUrl,
+      missing: canvas.missing
+    };
+  });
+}
+
+function startResultsSuspense(session, io) {
+  session.status = 'reveal-wait';
+  session.revealEndsAt = Date.now() + config.RESULTS_SUSPENSE_MS;
+  io.to(sessionRoom(session.id)).emit('session:reveal-wait', { revealEndsAt: session.revealEndsAt });
+  session.revealTimerHandle = setTimeout(() => {
+    goToResults(session, io);
+  }, config.RESULTS_SUSPENSE_MS);
+}
+
 function goToResults(session, io) {
+  clearTimeout(session.revealTimerHandle);
+  session.revealTimerHandle = null;
   session.status = 'results';
   drawingStorage.finalizeSessionFolder(session).catch((err) => console.error('세션 폴더 정리 실패:', err));
   io.to(sessionRoom(session.id)).emit('session:results-ready', { status: 'results' });
 
   for (const participant of session.participants) {
     if (!participant.socketId) continue;
-    io.to(participant.socketId).emit('results:your-portraits', {
-      portraits: getPortraitsForParticipant(session, participant.id)
-    });
+    let payload;
+    if (session.mode === 'baton') {
+      payload = { mode: session.mode, portraits: getBatonGallery(session, participant.id) };
+    } else {
+      payload = { mode: session.mode, portraits: getPortraitsForParticipant(session, participant.id) };
+      if (session.mode === 'portrait') {
+        payload.myDrawing = getArtistDrawing(session, participant.id);
+      }
+    }
+    io.to(participant.socketId).emit('results:your-portraits', payload);
   }
 }
 
@@ -217,6 +300,9 @@ module.exports = {
   forceAdvance,
   goToResults,
   getPortraitsForParticipant,
+  getArtistDrawing,
+  getFinalCanvasForOwner,
+  getBatonGallery,
   getSubmissionProgress,
   emitLobbyUpdate,
   emitSubmissionProgress,

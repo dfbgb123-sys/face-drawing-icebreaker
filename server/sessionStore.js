@@ -14,10 +14,28 @@ function getSession(id) {
   return sessions.get(id) || null;
 }
 
-function createSession({ participantNames, roundLengthMs, intermissionMs }, { forceReplace = false } = {}) {
+function createSession({ participantNames, roundLengthMs, intermissionMs, mode }, { forceReplace = false } = {}) {
   const names = (participantNames || []).map((n) => n.trim()).filter(Boolean);
+  const normalizedMode = ['portrait', 'baton', 'multi'].includes(mode) ? mode : 'portrait';
 
-  if (names.length < config.MIN_PARTICIPANTS) {
+  if (normalizedMode === 'portrait') {
+    if (names.length !== 2) {
+      const err = new Error('1:1 초상화 모드는 참가자가 정확히 2명이어야 합니다');
+      err.code = 'PORTRAIT_REQUIRES_TWO';
+      throw err;
+    }
+  } else if (normalizedMode === 'baton') {
+    if (names.length < config.MIN_PARTICIPANTS) {
+      const err = new Error(`Need at least ${config.MIN_PARTICIPANTS} participants`);
+      err.code = 'TOO_FEW_PARTICIPANTS';
+      throw err;
+    }
+    if (names.length > config.BATON_MAX_PARTICIPANTS) {
+      const err = new Error(`바톤터치는 최대 ${config.BATON_MAX_PARTICIPANTS}명까지 가능합니다`);
+      err.code = 'BATON_TOO_MANY_PARTICIPANTS';
+      throw err;
+    }
+  } else if (names.length < config.MIN_PARTICIPANTS) {
     const err = new Error(`Need at least ${config.MIN_PARTICIPANTS} participants`);
     err.code = 'TOO_FEW_PARTICIPANTS';
     throw err;
@@ -46,6 +64,7 @@ function createSession({ participantNames, roundLengthMs, intermissionMs }, { fo
     existing.status = 'ended';
     clearTimeout(existing.roundTimerHandle);
     clearTimeout(existing.intermissionTimerHandle);
+    clearTimeout(existing.revealTimerHandle);
   }
 
   const id = crypto.randomUUID();
@@ -57,6 +76,7 @@ function createSession({ participantNames, roundLengthMs, intermissionMs }, { fo
     status: 'lobby',
     createdAt,
     storageDirName: drawingStorage.buildInitialDirName(sessionOrdinal, createdAt),
+    mode: normalizedMode,
     roundLengthMs: roundLengthMs || config.DEFAULT_ROUND_MS,
     intermissionMs: intermissionMs != null ? intermissionMs : config.INTERMISSION_MS,
     participants: names.map((name, seatIndex) => ({
@@ -71,11 +91,13 @@ function createSession({ participantNames, roundLengthMs, intermissionMs }, { fo
     })),
     offsets: [],
     currentRoundIndex: -1,
-    totalRounds: names.length - 1,
+    totalRounds: normalizedMode === 'baton' ? names.length : names.length - 1,
     roundEndsAt: null,
     intermissionEndsAt: null,
+    revealEndsAt: null,
     roundTimerHandle: null,
     intermissionTimerHandle: null,
+    revealTimerHandle: null,
     submissions: new Map(),
     guesses: new Map(),
     hostSocketId: null
@@ -130,7 +152,7 @@ function removeParticipant(session, participantId) {
   session.participants.forEach((p, seatIndex) => {
     p.seatIndex = seatIndex;
   });
-  session.totalRounds = session.participants.length - 1;
+  session.totalRounds = session.mode === 'baton' ? session.participants.length : session.participants.length - 1;
   return true;
 }
 

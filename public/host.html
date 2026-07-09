@@ -10,29 +10,85 @@
 <body>
   <div class="container">
     <header class="host-header">
-      <h1>얼굴 그리기 아이스브레이커</h1>
-      <p class="muted">진행자 화면</p>
+      <div class="host-brand">
+        <div class="host-badge">HOST-ONLY ACCESS</div>
+        <div class="host-text">
+          <h1>초상화 배달부</h1>
+          <p class="tagline">Face Drawing Icebreaker</p>
+        </div>
+      </div>
     </header>
 
     <section id="view-setup">
-      <div class="card" style="padding:20px;">
-        <div class="setup-row">
-          <label for="names">참가자 이름 (한 줄에 한 명, 앉은 순서대로)</label>
-          <textarea id="names" placeholder="유지&#10;민서&#10;하늘&#10;다온&#10;서연"></textarea>
+      <div class="setup-header">
+        <button type="button" class="guide-trigger-btn" id="guide-btn">진행자 가이드</button>
+      </div>
+      <div class="setup-card card">
+        <div class="setup-row mode-row">
+          <label>게임 모드 선택</label>
+          <div class="mode-options">
+            <button type="button" class="mode-btn active" data-mode="portrait">1:1</button>
+            <button type="button" class="mode-btn" data-mode="baton">바톤터치</button>
+            <button type="button" class="mode-btn" data-mode="multi">1:多</button>
+          </div>
+          <div class="mode-preview">
+            <div class="mode-visual" id="mode-visual" data-mode="portrait">
+              <span class="mode-visual-icon" id="mode-visual-icon">👩‍🤝‍👩</span>
+              <div class="mode-visual-fade"></div>
+            </div>
+            <p class="mode-paragraph" id="mode-paragraph"></p>
+          </div>
         </div>
-        <div class="setup-row" style="max-width:160px;">
-          <label for="roundLength">라운드 길이 (분)</label>
-          <input id="roundLength" type="number" min="1" max="10" step="0.5" value="3" />
+        <div class="setup-columns">
+          <div class="setup-row participant-row">
+            <label for="names">참가자 이름<span class="hint-sub">한 줄에 한 명, 앉은 순서대로</span></label>
+            <div class="textarea-frame">
+              <textarea id="names" placeholder="유지&#10;민서&#10;하늘&#10;다온&#10;서연"></textarea>
+              <div class="participant-hint" id="participant-hint"></div>
+              <div class="participant-count" id="participant-count">참가자 0명</div>
+            </div>
+          </div>
+          <div class="setup-row round-row">
+            <label for="roundLength">그림 제출 시간 (분)<span class="hint-sub" id="round-tip">3~5분 권장</span></label>
+            <div class="round-panel">
+              <div class="round-input-row">
+                <div class="round-input">
+                  <input id="roundLength" type="number" min="1" max="10" step="0.5" value="3" />
+                  <span>min</span>
+                </div>
+              </div>
+              <div class="round-estimate" id="round-estimate-rounds">예상 라운드 : <span class="hint-sub">참가자 2명 이상 입력하면 계산돼요.</span></div>
+              <div class="round-estimate" id="round-estimate-time">총 소요시간 :</div>
+            </div>
+          </div>
         </div>
-        <div id="setup-error" class="muted" style="color:var(--danger); display:none;"></div>
-        <button class="btn" id="create-btn" style="width:100%;">세션 만들기</button>
+        <div id="setup-error" class="muted setup-error" aria-live="polite"></div>
+        <button class="btn btn-primary" id="create-btn">시작하기 <span class="btn-arrow">→</span></button>
       </div>
     </section>
+
+    <div class="modal-overlay" id="guide-modal" hidden>
+      <div class="modal-card card">
+        <div class="modal-head">
+          <h2>진행자 가이드</h2>
+          <button type="button" class="modal-close" id="guide-close" aria-label="닫기">×</button>
+        </div>
+        <p class="intro-text">서로의 얼굴을 번갈아 보며 빠르게 초상화를 완성하는 유쾌한 아이스브레이킹 게임입니다. QR 코드나 링크 하나로 간편하게 접속해 순서대로 그림을 그려보세요. 어색했던 첫 만남이 어느새 웃음바다로 바뀝니다!</p>
+        <hr class="modal-divider" />
+        <ol class="setup-guide">
+          <li>게임 모드를 선택합니다.</li>
+          <li>참가자 이름을 한 줄에 한 명씩 입력합니다.</li>
+          <li>그림 제출 제한 시간을 설정합니다.</li>
+          <li>시작하기를 눌러 세션을 생성합니다.</li>
+        </ol>
+      </div>
+    </div>
 
     <section id="view-lobby" style="display:none;">
       <div class="card join-panel">
         <img id="qr-img" alt="입장 QR코드" />
         <div class="join-url" id="join-url"></div>
+        <div class="session-mode" id="session-mode"></div>
         <p class="muted" style="margin:0;font-size:13px;">참가자들에게 QR코드를 보여주거나 위 주소를 알려주세요.</p>
       </div>
       <div class="card section-gap" style="padding:16px;">
@@ -62,7 +118,7 @@
     <section id="view-results" style="display:none;">
       <div class="card" style="padding:24px; text-align:center;">
         <h2 style="margin-top:0;">모든 라운드가 끝났어요</h2>
-        <p class="muted">각자 자기 화면에서 자신을 그린 그림들을 확인할 수 있어요. 진행자도 직접 보고 싶다면, 참가자 링크에 접속해서 본인 이름을 선택하면 됩니다.</p>
+        <p class="muted">각자 자기 화면에서 자신을 그린 그림들을 확인할 수 있어요.<br />진행자도 직접 보고 싶다면, 참가자 링크에 접속해서 본인 이름을 선택하면 됩니다.</p>
         <p class="muted" style="font-size:13px;">그림 파일은 서버의 <code>data/sessions/</code> 폴더에 저장되어 있어요.</p>
       </div>
       <div class="actions-row section-gap">
@@ -78,6 +134,8 @@
       </div>
     </section>
   </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="js/countdown.js"></script>

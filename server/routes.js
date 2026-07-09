@@ -21,10 +21,10 @@ function createRouter(io) {
   const router = express.Router();
 
   router.post('/api/sessions', express.json(), async (req, res) => {
-    const { participantNames, roundLengthMs, intermissionMs, forceReplace } = req.body || {};
+    const { participantNames, roundLengthMs, intermissionMs, mode, forceReplace } = req.body || {};
     try {
       const session = sessionStore.createSession(
-        { participantNames, roundLengthMs, intermissionMs },
+        { participantNames, roundLengthMs, intermissionMs, mode },
         { forceReplace: Boolean(forceReplace) }
       );
       const joinUrl = joinUrlFor(req);
@@ -36,13 +36,19 @@ function createRouter(io) {
         qrDataUrl,
         participants: session.participants.map(publicParticipant),
         roundLengthMs: session.roundLengthMs,
-        totalRounds: session.totalRounds
+        totalRounds: session.totalRounds,
+        mode: session.mode
       });
     } catch (err) {
       if (err.code === 'SESSION_ACTIVE') {
         return res.status(409).json({ code: err.code, message: err.message });
       }
-      if (err.code === 'TOO_FEW_PARTICIPANTS' || err.code === 'DUPLICATE_NAMES') {
+      if (
+        err.code === 'TOO_FEW_PARTICIPANTS' ||
+        err.code === 'DUPLICATE_NAMES' ||
+        err.code === 'PORTRAIT_REQUIRES_TWO' ||
+        err.code === 'BATON_TOO_MANY_PARTICIPANTS'
+      ) {
         return res.status(400).json({ code: err.code, message: err.message, duplicates: err.duplicates });
       }
       console.error(err);
@@ -57,6 +63,7 @@ function createRouter(io) {
       session: {
         id: session.id,
         status: session.status,
+        mode: session.mode,
         roundLengthMs: session.roundLengthMs,
         totalRounds: session.totalRounds,
         participants: session.participants.map(publicParticipant)
@@ -86,13 +93,9 @@ function createRouter(io) {
 
       try {
         const subject = sessionStore.findParticipantById(session, assignment.subjectId);
-        const pngPath = await drawingStorage.saveDrawing(
-          session,
-          roundIndex,
-          subject.name,
-          artist.name,
-          req.body
-        );
+        const pngPath = session.mode === 'baton'
+          ? await drawingStorage.saveBatonDrawing(session, subject.name, req.body)
+          : await drawingStorage.saveDrawing(session, roundIndex, subject.name, artist.name, req.body);
         const result = roundEngine.recordSubmission(session, io, {
           roundIndex,
           artistId: artist.id,

@@ -67,6 +67,28 @@ async function saveDrawing(session, roundIndex, subjectName, artistName, buffer)
   return filePath;
 }
 
+function batonFileNameFor(ownerName) {
+  return `BATON_${sanitizeForFilename(ownerName)}(캔버스).png`;
+}
+
+function batonPngUrlFor(session, ownerName) {
+  const filename = batonFileNameFor(ownerName);
+  return `/api/sessions/${session.id}/drawings/${encodeURIComponent(filename)}`;
+}
+
+async function saveBatonDrawing(session, ownerName, buffer) {
+  if (!isValidPng(buffer)) {
+    const err = new Error('Uploaded data is not a valid PNG');
+    err.code = 'INVALID_PNG';
+    throw err;
+  }
+  const dir = dirPathFor(session);
+  await fsp.mkdir(dir, { recursive: true });
+  const filePath = path.join(dir, batonFileNameFor(ownerName));
+  await fsp.writeFile(filePath, buffer);
+  return filePath;
+}
+
 async function finalizeSessionFolder(session) {
   if (session.storageDirFinalized) return;
   session.storageDirFinalized = true;
@@ -85,10 +107,13 @@ async function finalizeSessionFolder(session) {
 
 module.exports = {
   saveDrawing,
+  saveBatonDrawing,
   finalizeSessionFolder,
   buildInitialDirName,
   dirPathFor,
   fileNameFor,
   pngUrlFor,
+  batonFileNameFor,
+  batonPngUrlFor,
   isValidPng
 };

@@ -71,8 +71,30 @@
     canvasEl.addEventListener('pointerleave', pointerUp);
     canvasEl.style.touchAction = 'none';
 
+    function loadBackground(url) {
+      return new Promise((resolve) => {
+        if (!url) {
+          fillWhite();
+          resolve();
+          return;
+        }
+        const img = new Image();
+        img.onload = () => {
+          fillWhite();
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve();
+        };
+        img.onerror = () => {
+          fillWhite();
+          resolve();
+        };
+        img.src = url;
+      });
+    }
+
     return {
       clear: fillWhite,
+      loadBackground,
       setColor(c) { color = c; },
       setWidth(w) { lineWidth = w; },
       setTool(t) { tool = t; },

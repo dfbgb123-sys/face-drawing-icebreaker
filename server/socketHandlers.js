@@ -11,11 +11,13 @@ function publicParticipant(p) {
 function buildPlayerSnapshot(session, participant) {
   const base = {
     status: session.status,
+    mode: session.mode,
     roundLengthMs: session.roundLengthMs,
     totalRounds: session.totalRounds,
     currentRoundIndex: session.currentRoundIndex,
     roundEndsAt: session.roundEndsAt,
-    intermissionEndsAt: session.intermissionEndsAt
+    intermissionEndsAt: session.intermissionEndsAt,
+    revealEndsAt: session.revealEndsAt
   };
 
   if (session.status === 'drawing' || session.status === 'intermission') {
@@ -30,13 +32,23 @@ function buildPlayerSnapshot(session, participant) {
           subjectName: subject.name,
           alreadySubmitted: session.submissions.has(
             roundEngine.submissionKey(session.currentRoundIndex, participant.id)
-          )
+          ),
+          ...(session.mode === 'baton' && session.currentRoundIndex > 0
+            ? { canvasUrl: `${drawingStorage.batonPngUrlFor(session, subject.name)}?r=${session.currentRoundIndex}` }
+            : {})
         }
       : null;
   }
 
   if (session.status === 'results') {
-    base.portraits = roundEngine.getPortraitsForParticipant(session, participant.id);
+    if (session.mode === 'baton') {
+      base.portraits = roundEngine.getBatonGallery(session, participant.id);
+    } else {
+      base.portraits = roundEngine.getPortraitsForParticipant(session, participant.id);
+      if (session.mode === 'portrait') {
+        base.myDrawing = roundEngine.getArtistDrawing(session, participant.id);
+      }
+    }
   }
 
   return base;
@@ -139,11 +151,13 @@ function registerSocketHandlers(io) {
           ok: true,
           snapshot: {
             status: session.status,
+            mode: session.mode,
             roundLengthMs: session.roundLengthMs,
             totalRounds: session.totalRounds,
             currentRoundIndex: session.currentRoundIndex,
             roundEndsAt: session.roundEndsAt,
             intermissionEndsAt: session.intermissionEndsAt,
+            revealEndsAt: session.revealEndsAt,
             participants: session.participants.map(publicParticipant),
             submissionProgress:
               session.status === 'drawing' ? roundEngine.getSubmissionProgress(session) : null
@@ -181,6 +195,7 @@ function registerSocketHandlers(io) {
       if (!session) return ack && ack({ ok: false, code: 'NO_SESSION' });
       clearTimeout(session.roundTimerHandle);
       clearTimeout(session.intermissionTimerHandle);
+      clearTimeout(session.revealTimerHandle);
       session.status = 'ended';
       drawingStorage.finalizeSessionFolder(session).catch((err) => console.error('세션 폴더 정리 실패:', err));
       io.to(roundEngine.sessionRoom(session.id)).emit('session:lobby-update', {

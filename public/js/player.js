@@ -1,6 +1,6 @@
 (function () {
   const $ = (id) => document.getElementById(id);
-  const views = ['loading', 'none', 'join', 'lobby', 'intermission', 'drawing', 'results', 'ended'];
+  const views = ['loading', 'none', 'join', 'lobby', 'intermission', 'drawing', 'reveal', 'results', 'ended'];
   let currentView = 'loading';
   function showView(name) {
     currentView = name;
@@ -20,6 +20,8 @@
   let stopTimer = null;
   let portraits = [];
   let portraitIndex = 0;
+  let myDrawing = null;
+  let sessionMode = null;
   const guessState = new Map();
 
   function ensurePad() {
@@ -59,15 +61,37 @@
     stopTimer = PP.startCountdown($('intermission-timer'), intermissionEndsAt);
   }
 
+  function showRevealWait(revealEndsAt) {
+    showView('reveal');
+    if (stopTimer) stopTimer();
+    stopTimer = PP.startCountdown($('reveal-timer'), revealEndsAt);
+  }
+
+  function subjectPromptText(assignment) {
+    if (!assignment) return '';
+    if (sessionMode === 'baton') {
+      return assignment.canvasUrl
+        ? `${assignment.subjectName}님의 캔버스를 이어 그려주세요`
+        : `${assignment.subjectName}님, 첫 라운드예요! 본인의 얼굴을 그려주세요`;
+    }
+    return `${assignment.subjectName}님을 그려주세요`;
+  }
+
   function showDrawing(roundIndex, totalRounds, roundEndsAt, assignment) {
     pendingAssignment = assignment;
     submittedThisRound = assignment ? Boolean(assignment.alreadySubmitted) : false;
     showView('drawing');
     $('drawing-round-label').textContent = `라운드 ${roundIndex + 1} / ${totalRounds}`;
-    $('drawing-subject-name').textContent = assignment ? `${assignment.subjectName}님을 그려주세요` : '';
+    $('drawing-subject-name').textContent = subjectPromptText(assignment);
 
     ensurePad();
-    if (!submittedThisRound) pad.clear();
+    if (!submittedThisRound) {
+      if (sessionMode === 'baton' && assignment && assignment.canvasUrl) {
+        pad.loadBackground(assignment.canvasUrl);
+      } else {
+        pad.clear();
+      }
+    }
     updateSubmittedUI();
 
     if (stopTimer) stopTimer();
@@ -80,19 +104,30 @@
     const total = portraits.length;
     $('portrait-position').textContent = total ? `${portraitIndex + 1} / ${total}` : '0 / 0';
     const card = $('portrait-card');
+    const ownerLabel = $('portrait-owner-label');
+    const isBatonMode = sessionMode === 'baton';
+
     if (total === 0) {
       card.innerHTML = '<p class="muted" style="text-align:center;">받은 그림이 없어요.</p>';
       $('guess-panel').style.display = 'none';
+      if (ownerLabel) ownerLabel.textContent = '';
       return;
     }
-    $('guess-panel').style.display = '';
     const p = portraits[portraitIndex];
+    if (ownerLabel) {
+      ownerLabel.textContent = p.ownerName ? (p.isMine ? '내 캔버스' : `${p.ownerName}님의 캔버스`) : '';
+    }
     if (p.missing) {
       card.innerHTML = '<div class="portrait-missing">이 라운드에는 그림을 받지 못했어요.</div>';
     } else {
       card.innerHTML = `<img src="${p.pngUrl}" alt="내 초상화" /><a class="download-link" href="${p.pngUrl}" download>PNG로 저장</a>`;
     }
-    renderGuessPanel(p);
+    if (isBatonMode) {
+      $('guess-panel').style.display = 'none';
+    } else {
+      $('guess-panel').style.display = '';
+      renderGuessPanel(p);
+    }
   }
 
   function renderRevealResult(state) {
@@ -129,14 +164,49 @@
     if (state.revealed) renderRevealResult(state);
   }
 
+  function renderDuoImage(container, drawing, emptyText) {
+    if (!drawing || drawing.missing) {
+      container.innerHTML = `<div class="portrait-missing">${emptyText}</div>`;
+      return;
+    }
+    container.innerHTML = `<img src="${drawing.pngUrl}" alt="" /><a class="download-link" href="${drawing.pngUrl}" download>PNG로 저장</a>`;
+  }
+
+  function renderDuo() {
+    renderDuoImage($('duo-my-drawing'), myDrawing, '아직 그림이 없어요.');
+    renderDuoImage($('duo-their-drawing'), portraits[0] || null, '상대가 아직 제출하지 않았어요.');
+  }
+
   function showResults() {
     portraitIndex = 0;
     showView('results');
-    $('results-intro').textContent = `총 ${portraits.length}장을 확인할 수 있어요.`;
-    renderPortrait();
+    const isPortraitMode = sessionMode === 'portrait';
+    const isBatonMode = sessionMode === 'baton';
+    $('portrait-duo').style.display = isPortraitMode ? '' : 'none';
+    $('portrait-nav').style.display = isPortraitMode ? 'none' : '';
+    $('portrait-card').style.display = isPortraitMode ? 'none' : '';
+
+    if (isPortraitMode) {
+      $('guess-panel').style.display = 'none';
+      $('results-title-text').textContent = '서로를 그린 그림';
+      $('results-intro').textContent = '내가 그린 그림과 상대가 그려준 그림을 비교해보세요.';
+      renderDuo();
+    } else if (isBatonMode) {
+      $('results-title-text').textContent = '완성된 캔버스들';
+      $('results-intro').textContent = '내 캔버스부터 순서대로 모두의 완성작을 확인해보세요.';
+      renderPortrait();
+    } else {
+      $('results-title-text').textContent = '나를 그린 그림들';
+      const receivedCount = portraits.filter((p) => !p.missing).length;
+      $('results-intro').textContent = receivedCount > 0
+        ? `총 ${receivedCount}장을 확인할 수 있어요.`
+        : '아쉽게도 받은 그림이 없어요.';
+      renderPortrait();
+    }
   }
 
   function applySnapshot(snap) {
+    if (snap.mode) sessionMode = snap.mode;
     if (snap.status === 'lobby') {
       showLobby();
     } else if (snap.status === 'intermission') {
@@ -144,8 +214,11 @@
       showIntermission(snap.intermissionEndsAt);
     } else if (snap.status === 'drawing') {
       showDrawing(snap.currentRoundIndex, snap.totalRounds, snap.roundEndsAt, snap.currentAssignment);
+    } else if (snap.status === 'reveal-wait') {
+      showRevealWait(snap.revealEndsAt);
     } else if (snap.status === 'results') {
       portraits = snap.portraits || [];
+      myDrawing = snap.myDrawing || null;
       showResults();
     } else {
       showView('ended');
@@ -205,8 +278,8 @@
       if (data.status === 'ended') showView('ended');
     });
 
-    socket.on('round:assignment', ({ roundIndex, subjectId, subjectName }) => {
-      pendingAssignment = { roundIndex, subjectId, subjectName };
+    socket.on('round:assignment', ({ roundIndex, subjectId, subjectName, canvasUrl }) => {
+      pendingAssignment = { roundIndex, subjectId, subjectName, canvasUrl };
     });
 
     socket.on('session:intermission', ({ intermissionEndsAt }) => {
@@ -222,12 +295,18 @@
       updateSubmittedUI();
     });
 
+    socket.on('session:reveal-wait', ({ revealEndsAt }) => {
+      showRevealWait(revealEndsAt);
+    });
+
     socket.on('session:results-ready', () => {
       if (stopTimer) stopTimer();
     });
 
     socket.on('results:your-portraits', (data) => {
+      if (data.mode) sessionMode = data.mode;
       portraits = data.portraits || [];
+      myDrawing = data.myDrawing || null;
       showResults();
     });
   }
@@ -247,6 +326,7 @@
       return;
     }
     sessionId = data.session.id;
+    sessionMode = data.session.mode || null;
     allParticipants = data.session.participants;
     renderNameGrid(allParticipants);
     showView('join');

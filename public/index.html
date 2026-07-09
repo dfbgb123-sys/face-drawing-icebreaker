@@ -20,7 +20,7 @@
     </section>
 
     <section id="view-join" style="display:none;">
-      <div class="center-message" style="padding-top:0;">
+      <div class="center-message join-card">
         <h2>내 이름을 선택하세요</h2>
       </div>
       <div class="name-grid" id="name-grid"></div>
@@ -68,18 +68,39 @@
       </div>
     </section>
 
+    <section id="view-reveal" class="center-message" style="display:none;">
+      <p class="muted round-label">두구두구 🥁</p>
+      <h2>결과를 준비하고 있어요!</h2>
+      <div class="timer" id="reveal-timer">0:00</div>
+    </section>
+
     <section id="view-results" style="display:none;">
-      <div class="center-message" style="padding-top:0;">
-        <h2>나를 그린 그림들</h2>
+      <div class="center-message results-summary">
+        <div class="results-title">
+          <span class="results-icon">🎨</span>
+          <h2 id="results-title-text">나를 그린 그림들</h2>
+        </div>
         <p class="muted" id="results-intro"></p>
       </div>
 
-      <div class="portrait-nav">
+      <div class="portrait-duo" id="portrait-duo" style="display:none;">
+        <div class="duo-card">
+          <p class="duo-label">내가 그린 그림</p>
+          <div class="duo-image" id="duo-my-drawing"></div>
+        </div>
+        <div class="duo-card">
+          <p class="duo-label">상대가 그린 내 그림</p>
+          <div class="duo-image" id="duo-their-drawing"></div>
+        </div>
+      </div>
+
+      <div class="portrait-nav" id="portrait-nav">
         <button class="nav-btn" id="prev-btn">‹</button>
         <span class="position" id="portrait-position"></span>
         <button class="nav-btn" id="next-btn">›</button>
       </div>
 
+      <p class="portrait-owner-label" id="portrait-owner-label"></p>
       <div class="portrait-card" id="portrait-card"></div>
 
       <div class="guess-panel" id="guess-panel">
