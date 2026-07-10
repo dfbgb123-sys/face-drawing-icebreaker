@@ -32,13 +32,13 @@ function sanitizeForFilename(name) {
 
 function buildInitialDirName(ordinal, startedAtMs) {
   const d = new Date(startedAtMs);
-  return `${ordinal}회차_${formatDate(d)}_${formatTime(d)}`;
+  return `${formatDate(d)}_${formatTime(d)}_${ordinal}회차`;
 }
 
 function finalizeDirName(ordinal, startedAtMs, endedAtMs) {
   const start = new Date(startedAtMs);
   const end = new Date(endedAtMs);
-  return `${ordinal}회차_${formatDate(start)}_${formatTime(start)}-${formatTime(end)}`;
+  return `${formatDate(start)}_${formatTime(start)}-${formatTime(end)}_${ordinal}회차`;
 }
 
 function dirPathFor(session) {
